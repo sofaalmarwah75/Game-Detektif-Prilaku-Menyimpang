@@ -1,0 +1,2075 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Biro Investigasi Sosiologi (BIS): Patrolling TKP 2D</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-desk: #0f1216;
+            --paper-manila: #f3ead8;
+            --paper-ink: #1e1b18;
+            --amber-lamp: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-desk);
+            color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .font-typewriter {
+            font-family: 'Courier Prime', monospace;
+        }
+
+        .manila-folder {
+            background-color: var(--paper-manila);
+            background-image:
+                linear-gradient(to bottom, rgba(255,255,255,0.45), rgba(214, 198, 165, 0.35)),
+                radial-gradient(rgba(120, 90, 40, 0.08) 1px, transparent 0);
+            background-size: 100% 100%, 16px 16px;
+            color: var(--paper-ink);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(245, 158, 11, 0.35);
+        }
+
+        .detective-stamp {
+            font-family: 'Courier Prime', monospace;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            border: 3px solid currentColor;
+            padding: 0.2rem 0.65rem;
+            border-radius: 0.3rem;
+            display: inline-block;
+            transform: rotate(-3.5deg);
+        }
+
+        @keyframes stampSlam {
+            0% { transform: scale(2.2) rotate(-10deg); opacity: 0; }
+            65% { transform: scale(0.95) rotate(-3deg); opacity: 1; }
+            100% { transform: scale(1) rotate(-3.5deg); opacity: 1; }
+        }
+
+        .animate-stamp {
+            animation: stampSlam 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-slide-up {
+            animation: slideUp 0.28s ease-out forwards;
+        }
+
+        /* Canvas 2D Game Viewport */
+        #gameCanvasWrapper {
+            position: relative;
+            width: 100%;
+            height: 62vh;
+            min-height: 360px;
+            max-height: 580px;
+            background: #14181f;
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 2px solid rgba(245, 158, 11, 0.35);
+            box-shadow: 0 18px 40px rgba(0, 0, 0, 0.75);
+        }
+
+        canvas#tkpCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* Virtual D-Pad untuk Layar Sentuh & Mobile */
+        .dpad-btn {
+            background: rgba(24, 28, 36, 0.85);
+            border: 1.5px solid rgba(245, 158, 11, 0.45);
+            color: #fbbf24;
+            backdrop-filter: blur(4px);
+            transition: transform 0.08s ease, background 0.1s ease;
+        }
+        .dpad-btn:active, .dpad-btn.pressed {
+            background: rgba(245, 158, 11, 0.35);
+            transform: scale(0.92);
+        }
+
+        .option-btn {
+            background-color: #1f242d;
+            border: 1.5px solid #374151;
+            color: #f3f4f6;
+            transition: all 0.16s ease;
+        }
+        .option-btn:hover:not(:disabled) {
+            background-color: #29303d;
+            border-color: #f59e0b;
+            transform: translateY(-1px);
+        }
+        .option-btn.correct {
+            background-color: #064e3b !important;
+            border-color: #10b981 !important;
+            color: #ecfdf5 !important;
+        }
+        .option-btn.wrong {
+            background-color: #7f1d1d !important;
+            border-color: #ef4444 !important;
+            color: #fef2f2 !important;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- ==================== HEADER BAR BIRO INVESTIGASI ==================== -->
+    <header class="w-full border-b border-amber-500/25 bg-[#14181e]/95 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-3 sm:px-5 py-2.5 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="confirmReturnToLobby()">
+                <!-- Lencana Detektif SVG -->
+                <svg class="w-9 h-9 shrink-0" viewBox="0 0 64 64" fill="none">
+                    <path d="M32 4L54 13V31C54 45.5 44.5 56.5 32 60C19.5 56.5 10 45.5 10 31V13L32 4Z" fill="#1F242D" stroke="#F59E0B" stroke-width="3"/>
+                    <circle cx="30" cy="29" r="9" stroke="#F59E0B" stroke-width="3"/>
+                    <line x1="37" y1="36" x2="45" y2="44" stroke="#F59E0B" stroke-width="3.5" stroke-linecap="round"/>
+                </svg>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-xs sm:text-base tracking-wide text-amber-400">BIS: PATROLLING TKP 2D</span>
+                        <span class="hidden md:inline-block font-typewriter text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">DIVISI SOSIOLOGI</span>
+                    </div>
+                    <p id="headerStatusLabel" class="text-[11px] text-gray-400 font-typewriter">UNIT PATROLI LAPANGAN • SIAGA</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="toggleManualModal()" class="px-3 py-1.5 sm:py-2 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition cursor-pointer">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>Buku Saku</span>
+                </button>
+                <button onclick="toggleSound()" class="w-9 h-9 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-600 text-amber-400 flex items-center justify-center transition cursor-pointer" title="Efek Suara">
+                    <i id="soundToggleIcon" class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== KONTEN UTAMA ==================== -->
+    <main class="flex-grow flex items-center justify-center px-3 sm:px-5 py-4 w-full max-w-6xl mx-auto">
+
+        <!-- 1. LAYAR LOBI / BRIEFING PATROLI 2D -->
+        <section id="lobbyScreen" class="w-full max-w-3xl animate-slide-up">
+            <div class="manila-folder rounded-2xl p-6 sm:p-9">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-stone-400/60 pb-3.5 mb-5">
+                    <div class="font-typewriter text-xs text-stone-700">
+                        <div>OPERASI: <strong>PATROLI TKP SOSIOLOGI 2D</strong></div>
+                        <div>MATERI: <strong>PERILAKU MENYIMPANG & PENGENDALIAN SOSIAL</strong></div>
+                    </div>
+                    <div class="detective-stamp text-red-700 text-xs">SURAT TUGAS LAPANGAN</div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-center gap-5 mb-6">
+                    <!-- Ilustrasi Detektif 2D -->
+                    <div class="w-28 h-28 shrink-0 bg-stone-900 rounded-2xl border-2 border-amber-500/50 flex items-center justify-center shadow-lg">
+                        <svg viewBox="0 0 100 100" class="w-24 h-24">
+                            <!-- Topi Fedora -->
+                            <ellipse cx="50" cy="34" rx="28" ry="8" fill="#4B3621" stroke="#F59E0B" stroke-width="2"/>
+                            <path d="M32 34C32 20 68 20 68 34" fill="#5C4033" stroke="#F59E0B" stroke-width="2"/>
+                            <rect x="33" y="29" width="34" height="4" fill="#D97706"/>
+                            <!-- Wajah & Kaca Pembesar -->
+                            <circle cx="50" cy="46" r="13" fill="#FCD34D"/>
+                            <circle cx="45" cy="44" r="2" fill="#1F2937"/>
+                            <circle cx="55" cy="44" r="2" fill="#1F2937"/>
+                            <!-- Mantel Detektif -->
+                            <path d="M28 86L34 59H66L72 86H28Z" fill="#785A3C" stroke="#F59E0B" stroke-width="2"/>
+                            <circle cx="72" cy="64" r="11" fill="#0F172A" stroke="#38BDF8" stroke-width="3"/>
+                            <line x1="80" y1="72" x2="90" y2="82" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-stone-900 mb-2">
+                            Biro Investigasi Sosiologi: Patrolling TKP 2D
+                        </h1>
+                        <p class="text-stone-700 text-xs sm:text-sm leading-relaxed">
+                            Kendalikan karakter Detektif BIS menyusuri <strong>5 Zona TKP 2D</strong> di lingkungan masyarakat! Wawancarai para saksi mata, periksa barang bukti fisik di lapangan, dan terbitkan surat perintah pengendalian sosial yang tepat.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Panduan Kontrol 2D -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 text-xs">
+                    <div class="bg-white/80 p-3 rounded-xl border border-stone-300">
+                        <div class="font-extrabold text-amber-800 mb-1"><i class="fa-solid fa-gamepad mr-1"></i> Gerak Detektif 2D</div>
+                        <p class="text-stone-700">Gunakan tombol <strong>WASD / Panah</strong> di keyboard atau <strong>D-Pad layar sentuh</strong> untuk berjalan di peta TKP.</p>
+                    </div>
+                    <div class="bg-white/80 p-3 rounded-xl border border-stone-300">
+                        <div class="font-extrabold text-amber-800 mb-1"><i class="fa-solid fa-magnifying-glass mr-1"></i> Periksa 3 Hotspot</div>
+                        <p class="text-stone-700">Dekati <strong>2 Saksi Warga</strong> & <strong>1 Barang Bukti</strong> berkilau lalu tekan <strong>SPASI / Tombol Periksa</strong>.</p>
+                    </div>
+                    <div class="bg-white/80 p-3 rounded-xl border border-stone-300">
+                        <div class="font-extrabold text-amber-800 mb-1"><i class="fa-solid fa-gavel mr-1"></i> Meja Deduksi Kasus</div>
+                        <p class="text-stone-700">Setelah 3 petunjuk terkumpul, tentukan <strong>Teori Penyimpangan</strong> & <strong>Pengendalian Sosial</strong>.</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+                    <div class="flex-grow">
+                        <label for="agentNameField" class="block font-typewriter text-xs font-bold uppercase text-stone-700 mb-1">
+                            NAMA / KODE PENYIDIK LAPANGAN:
+                        </label>
+                        <input type="text" id="agentNameField" placeholder="Contoh: Inspektur Arya" maxlength="24"
+                            class="w-full px-4 py-3 rounded-xl bg-white border-2 border-stone-400 focus:border-amber-600 focus:outline-none text-stone-900 font-bold">
+                    </div>
+                    <button onclick="startPatrolGame()" class="px-6 py-3.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-sm sm:text-base shadow-lg transition flex items-center justify-center gap-2 shrink-0 cursor-pointer">
+                        <span>TURUN KE TKP #01</span>
+                        <i class="fa-solid fa-person-walking"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. LAYAR PERMAINAN 2D TOP-DOWN TKP -->
+        <section id="gameplayScreen" class="hidden w-full flex flex-col gap-3">
+            
+            <!-- HUD Atas: Informasi TKP, Bukti Terkumpul & Skor -->
+            <div class="bg-[#161a22] border border-amber-500/30 rounded-xl px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 shadow-md">
+                <div class="flex items-center gap-2.5">
+                    <span id="hudCaseBadge" class="font-typewriter text-xs font-bold px-2.5 py-1 rounded bg-amber-500 text-stone-950">
+                        KASUS 1/5
+                    </span>
+                    <div>
+                        <h2 id="hudCaseTitle" class="text-xs sm:text-sm font-extrabold text-white leading-tight">
+                            Stigma Vandalisme Gang Melati
+                        </h2>
+                        <p id="hudCaseZone" class="text-[11px] text-amber-300/90 font-typewriter">
+                            Zona: Gang Melati & Pos Warga
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Tracker 3 Petunjuk TKP -->
+                <div class="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-lg border border-gray-800">
+                    <span class="text-[11px] font-typewriter text-gray-400 hidden sm:inline">PETUNJUK TKP:</span>
+                    <div id="clueTrackerPills" class="flex items-center gap-1.5">
+                        <!-- Diisi via JS -->
+                    </div>
+                </div>
+
+                <!-- Skor & Tombol Buka Meja Analisis -->
+                <div class="flex items-center gap-2.5">
+                    <button id="openDeductionBtn" onclick="openDeductionModal()" class="hidden px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-extrabold text-xs animate-bounce shadow-lg cursor-pointer">
+                        <i class="fa-solid fa-folder-open mr-1"></i> MEJA ANALISIS SIAP!
+                    </button>
+                    <div class="text-right bg-gray-900 px-3 py-1 rounded-lg border border-gray-700">
+                        <div class="text-[9px] font-typewriter text-gray-400">POIN BIRO</div>
+                        <div id="hudScoreValue" class="text-sm sm:text-base font-extrabold text-amber-400 leading-none">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEWPORT KANVAS 2D -->
+            <div id="gameCanvasWrapper">
+                <canvas id="tkpCanvas"></canvas>
+
+                <!-- Kotak Dialog Interaksi Saksi / Bukti di dalam Viewport 2D -->
+                <div id="dialogueOverlay" class="hidden absolute bottom-3 left-3 right-3 sm:left-6 sm:right-6 bg-[#141820]/95 border-2 border-amber-500/70 rounded-xl p-3.5 sm:p-4 shadow-2xl backdrop-blur-md animate-slide-up z-20">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-start gap-3">
+                            <div id="dialogueAvatar" class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400 text-amber-400 flex items-center justify-center text-lg shrink-0">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <span id="dialogueSpeakerRole" class="font-typewriter text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500 text-stone-950 uppercase">SAKSI #1</span>
+                                    <h4 id="dialogueSpeakerName" class="font-extrabold text-xs sm:text-sm text-amber-300">Pak RT Budi</h4>
+                                </div>
+                                <p id="dialogueText" class="text-xs sm:text-sm text-gray-100 leading-relaxed">
+                                    Keterangan saksi muncul di sini...
+                                </p>
+                            </div>
+                        </div>
+                        <button onclick="closeDialogueOverlay()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs shrink-0 cursor-pointer">
+                            Catat [OK]
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KONTROL VIRTUAL SENTUH (D-PAD & TOMBOL PERIKSA) -->
+                <div class="absolute bottom-3 left-3 z-10 flex flex-col items-center gap-1 opacity-90 sm:opacity-75 hover:opacity-100">
+                    <button id="btnUp" class="dpad-btn w-11 h-11 rounded-xl flex items-center justify-center text-base"><i class="fa-solid fa-chevron-up"></i></button>
+                    <div class="flex items-center gap-1">
+                        <button id="btnLeft" class="dpad-btn w-11 h-11 rounded-xl flex items-center justify-center text-base"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button id="btnDown" class="dpad-btn w-11 h-11 rounded-xl flex items-center justify-center text-base"><i class="fa-solid fa-chevron-down"></i></button>
+                        <button id="btnRight" class="dpad-btn w-11 h-11 rounded-xl flex items-center justify-center text-base"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+
+                <div class="absolute bottom-3 right-3 z-10 flex flex-col items-end gap-2">
+                    <button id="btnInteractTouch" onclick="triggerInteraction()" class="px-4 py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 font-extrabold text-xs sm:text-sm shadow-xl border-2 border-amber-200 flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <span id="interactBtnLabel">PERIKSA [SPASI]</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bar Petunjuk Singkat di Bawah Peta -->
+            <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-400 px-1">
+                <div>
+                    <i class="fa-solid fa-circle-info text-amber-400 mr-1"></i>
+                    <span id="bottomHintText">Arahkan detektif ke titik ikon berkilau di peta untuk mewawancarai saksi atau mengambil bukti.</span>
+                </div>
+                <div class="font-typewriter hidden sm:block">GERAK: [WASD / PANAH] • INTERAKSI: [SPASI / E]</div>
+            </div>
+        </section>
+
+        <!-- 3. LAYAR LAPORAN AKHIR PATROLI -->
+        <section id="summaryScreen" class="hidden w-full max-w-3xl animate-slide-up">
+            <div class="manila-folder rounded-2xl p-6 sm:p-9">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-stone-400/60 pb-4 mb-5">
+                    <div>
+                        <span class="font-typewriter text-xs font-bold text-stone-600">EVALUASI AKHIR UNIT PATROLI 2D • BIS</span>
+                        <h2 id="finalAgentTitle" class="text-2xl sm:text-3xl font-extrabold text-stone-900">Inspektur Lapangan</h2>
+                    </div>
+                    <div class="detective-stamp text-emerald-800 text-xs sm:text-sm animate-stamp">PATROLI TUNTAS</div>
+                </div>
+
+                <div class="bg-stone-900 text-white rounded-2xl p-5 mb-5 flex flex-col sm:flex-row items-center justify-between gap-4 border border-amber-500/40">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-amber-500/20 border-2 border-amber-400 text-amber-400 flex items-center justify-center text-2xl shrink-0">
+                            <i class="fa-solid fa-award"></i>
+                        </div>
+                        <div>
+                            <div class="font-typewriter text-xs text-amber-400">PANGKAT DETEKTIF</div>
+                            <div id="finalRankText" class="text-xl font-extrabold text-white">Kepala Biro Investigasi</div>
+                            <p id="finalRankSubtitle" class="text-xs text-gray-300 mt-0.5">Seluruh TKP 2D berhasil dianalisis dengan sangat tajam.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 bg-black/40 px-4 py-2.5 rounded-xl border border-gray-700 shrink-0">
+                        <div class="text-center">
+                            <div class="font-typewriter text-[10px] text-gray-400">TOTAL POIN</div>
+                            <div id="finalScoreText" class="text-2xl font-extrabold text-amber-400">0</div>
+                        </div>
+                        <div class="w-px bg-gray-700"></div>
+                        <div class="text-center">
+                            <div class="font-typewriter text-[10px] text-gray-400">AKURASI</div>
+                            <div id="finalAccText" class="text-2xl font-extrabold text-emerald-400">0%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <h3 class="font-typewriter font-bold text-xs uppercase text-stone-700 mb-2.5">REKAP PENYELESAIAN 5 ZONA TKP:</h3>
+                    <div id="finalCaseLogList" class="space-y-2"></div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button onclick="startPatrolGame()" class="px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-extrabold text-sm shadow-lg transition flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>ULANGI PATROLI 2D</span>
+                    </button>
+                    <button onclick="toggleManualModal()" class="px-6 py-3 rounded-xl bg-stone-800 hover:bg-stone-700 text-amber-300 font-bold text-sm transition flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-book-open"></i>
+                        <span>BUKA BUKU SAKU SOSIOLOGI</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== MODAL MEJA ANALISIS DETEKTIF (SETELAH 3 PETUNJUK TKP) ==================== -->
+    <div id="deductionModal" class="hidden fixed inset-0 z-40 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+        <div class="manila-folder rounded-2xl w-full max-w-3xl p-5 sm:p-7 my-auto animate-slide-up">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b-2 border-stone-400/70 pb-3 mb-4">
+                <div>
+                    <span id="deductionCaseCode" class="font-typewriter text-xs font-bold px-2 py-0.5 bg-stone-800 text-amber-400 rounded">KASUS #01</span>
+                    <h3 id="deductionCaseName" class="text-lg sm:text-xl font-extrabold text-stone-900 mt-1">Meja Analisis Deduksi Sosiologi</h3>
+                </div>
+                <button onclick="closeDeductionModal()" class="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-gray-200 text-xs font-bold cursor-pointer">
+                    <i class="fa-solid fa-map mr-1"></i> Lihat Peta TKP
+                </button>
+            </div>
+
+            <!-- Ringkasan 3 Petunjuk yang Dikumpulkan dari Peta 2D -->
+            <div id="collectedCluesSummary" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-5">
+                <!-- Diisi via JS -->
+            </div>
+
+            <!-- Panel Pertanyaan Analisis (Tahap 1: Profil & Teori -> Tahap 2: Pengendalian Sosial) -->
+            <div class="bg-stone-900 text-gray-100 rounded-xl p-4 sm:p-5 border border-amber-500/40">
+                <div class="flex items-center justify-between mb-1.5">
+                    <span id="deductionStepTag" class="font-typewriter text-xs font-bold text-amber-400 uppercase">
+                        TAHAP 1/2 • DIAGNOSIS PROFIL & TEORI PENYIMPANGAN
+                    </span>
+                </div>
+                <h4 id="deductionQuestionText" class="text-sm sm:text-base font-bold text-white mb-4 leading-snug">
+                    Pertanyaan analisis sosiologi...
+                </h4>
+
+                <div id="deductionOptionsBox" class="space-y-2.5">
+                    <!-- Opsi jawaban -->
+                </div>
+
+                <!-- Kotak Pembahasan Akademis -->
+                <div id="deductionFeedbackBox" class="hidden mt-4 p-3.5 rounded-xl border animate-slide-up">
+                    <div class="flex items-start gap-3">
+                        <div id="deductionFbIcon" class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"></div>
+                        <div class="flex-grow">
+                            <h5 id="deductionFbTitle" class="font-extrabold text-sm mb-1"></h5>
+                            <p id="deductionFbDesc" class="text-xs sm:text-sm text-gray-200 leading-relaxed"></p>
+                            <div class="mt-3 text-right">
+                                <button id="deductionNextBtn" onclick="advanceDeductionStep()" class="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 font-extrabold text-xs sm:text-sm transition inline-flex items-center gap-2 cursor-pointer">
+                                    <span>LANJUT KE PENGENDALIAN SOSIAL</span>
+                                    <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL BUKU SAKU SOSIOLOGI ==================== -->
+    <div id="manualModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-[#181c24] border-2 border-amber-500/40 rounded-2xl w-full max-w-2xl max-h-[82vh] flex flex-col shadow-2xl animate-slide-up">
+            <div class="p-4 border-b border-gray-800 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-book-bookmark text-amber-400 text-lg"></i>
+                    <h3 class="font-extrabold text-base text-white">Buku Saku Detektif Sosiologi</h3>
+                </div>
+                <button onclick="toggleManualModal()" class="w-8 h-8 rounded-lg bg-gray-800 hover:bg-red-600 text-gray-300 hover:text-white flex items-center justify-center cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 sm:p-5 overflow-y-auto space-y-3.5 text-xs sm:text-sm text-gray-200 leading-relaxed">
+                <div class="bg-gray-900 p-3.5 rounded-xl border border-gray-800">
+                    <h4 class="font-bold text-amber-400 mb-1">1. Klasifikasi Perilaku Menyimpang</h4>
+                    <ul class="list-disc pl-5 space-y-1 text-gray-300">
+                        <li><strong>Primer vs. Sekunder (Lemert):</strong> <em>Primer</em> bersifat sementara/sesekali dan masih ditoleransi; <em>Sekunder</em> dilakukan berulang kali dan tidak ditoleransi masyarakat.</li>
+                        <li><strong>Positif vs. Negatif:</strong> <em>Positif</em> mendobrak stereotip lama namun berdampak inovatif/baik (misal: perempuan mekanik); <em>Negatif</em> merugikan dan melanggar norma/hukum.</li>
+                        <li><strong>Individual vs. Kelompok:</strong> Dilakukan sendirian vs. dilakukan bersama sindikat/geng.</li>
+                    </ul>
+                </div>
+                <div class="bg-gray-900 p-3.5 rounded-xl border border-gray-800">
+                    <h4 class="font-bold text-amber-400 mb-1">2. Teori Utama Sosiologi</h4>
+                    <ul class="list-disc pl-5 space-y-1 text-gray-300">
+                        <li><strong>Teori Labeling (Edwin M. Lemert):</strong> Julukan/stigma negatif ("anak nakal") mendorong pelaku mengulang penyimpangan menjadi sekunder.</li>
+                        <li><strong>Teori Differential Association (Edwin H. Sutherland):</strong> Penyimpangan dipelajari melalui pergaulan akrab dengan kelompok menyimpang.</li>
+                        <li><strong>Teori Anomie (Robert K. Merton):</strong> Ketegangan antara tujuan budaya (kekayaan/status) dan keterbatasan cara sah memicu jalan pintas ilegal (<em>Innovation</em>).</li>
+                    </ul>
+                </div>
+                <div class="bg-gray-900 p-3.5 rounded-xl border border-gray-800">
+                    <h4 class="font-bold text-emerald-400 mb-1">3. Pengendalian Sosial</h4>
+                    <ul class="list-disc pl-5 space-y-1 text-gray-300">
+                        <li><strong>Preventif:</strong> Pencegahan sebelum terjadi (sosialisasi, edukasi).</li>
+                        <li><strong>Represif & Koersif:</strong> Penindakan tegas/sanksi hukum setelah pelanggaran terjadi untuk memberi efek jera.</li>
+                        <li><strong>Kuratif & Persuasif:</strong> Pemulihan pelaku melalui bimbingan, konseling, dan dialog tanpa kekerasan.</li>
+                        <li><strong>Ostrasisme & Fraundulens:</strong> <em>Ostrasisme</em> adalah pengucilan dari pergaulan; <em>Fraundulens</em> adalah meminta bantuan pihak berwibawa/adat/aparat.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL KONFIRMASI KEMBALI KE LOBI ==================== -->
+    <div id="confirmLobbyModal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+        <div class="bg-[#181c24] border border-amber-500/40 rounded-2xl w-full max-w-sm p-5 text-center shadow-2xl">
+            <h3 class="font-extrabold text-base text-white mb-1.5">Kembali ke Lobi Utama?</h3>
+            <p class="text-xs text-gray-300 mb-4">Progres patroli TKP pada sesi ini akan direset.</p>
+            <div class="flex gap-2.5">
+                <button onclick="document.getElementById('confirmLobbyModal').classList.add('hidden')" class="flex-1 py-2 rounded-lg bg-gray-800 text-gray-200 font-bold text-xs cursor-pointer">Batal</button>
+                <button onclick="returnToLobby()" class="flex-1 py-2 rounded-lg bg-red-600 text-white font-bold text-xs cursor-pointer">Ya, Kembali</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== ENGINE 2D CANVAS & DATABASE 5 TKP ==================== -->
+    <script>
+        /* =========================================================================
+           1. AUDIO ENGINE SINTETIS (WEB AUDIO API)
+           ========================================================================= */
+        let soundOn = true;
+        let audioContext = null;
+
+        function getAudioCtx() {
+            if (!audioContext) {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                audioContext = new AC();
+            }
+            if (audioContext.state === 'suspended') audioContext.resume();
+            return audioContext;
+        }
+
+        function playSFX(kind) {
+            if (!soundOn) return;
+            try {
+                const ctx = getAudioCtx();
+                const t = ctx.currentTime;
+                if (kind === 'step') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(110 + Math.random() * 25, t);
+                    osc.frequency.exponentialRampToValueAtTime(45, t + 0.045);
+                    gain.gain.setValueAtTime(0.05, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.045);
+                } else if (kind === 'clue') {
+                    [523.25, 659.25, 783.99].forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, t + i * 0.07);
+                        gain.gain.setValueAtTime(0.14, t + i * 0.07);
+                        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.07 + 0.25);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(t + i * 0.07);
+                        osc.stop(t + i * 0.07 + 0.25);
+                    });
+                } else if (kind === 'success') {
+                    [392.00, 493.88, 587.33, 783.99].forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, t + i * 0.06);
+                        gain.gain.setValueAtTime(0.15, t + i * 0.06);
+                        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.06 + 0.32);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(t + i * 0.06);
+                        osc.stop(t + i * 0.06 + 0.32);
+                    });
+                } else if (kind === 'error') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(160, t);
+                    osc.frequency.linearRampToValueAtTime(115, t + 0.24);
+                    gain.gain.setValueAtTime(0.14, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.24);
+                } else if (kind === 'stamp') {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(145, t);
+                    osc.frequency.exponentialRampToValueAtTime(40, t + 0.14);
+                    gain.gain.setValueAtTime(0.3, t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.14);
+                }
+            } catch (e) {}
+        }
+
+        function toggleSound() {
+            soundOn = !soundOn;
+            document.getElementById('soundToggleIcon').className = soundOn
+                ? 'fa-solid fa-volume-high'
+                : 'fa-solid fa-volume-xmark text-red-400';
+        }
+
+        /* =========================================================================
+           2. DATA 5 KASUS & PETA 2D TKP (KOORDINAT LOGIS 960 x 560)
+           ========================================================================= */
+        const MAP_W = 960;
+        const MAP_H = 560;
+
+        const casesData = [
+            {
+                code: 'KASUS #01',
+                title: 'Stigma Vandalisme Gang Melati',
+                zoneName: 'Gang Melati, Taman Warga & Pos Kamling',
+                themeColor: '#f59e0b',
+                envType: 'neighborhood',
+                groundColor: '#1b232e',
+                spawn: { x: 140, y: 440 },
+                buildings: [
+                    { x: 55, y: 38, w: 260, h: 145, label: 'BALAI WARGA MELATI', wall: '#3b4252', roof: '#4c566a', trim: '#f59e0b', roofStyle: 'tile' },
+                    { x: 615, y: 40, w: 280, h: 150, label: 'SMA NEGERI HARAPAN', wall: '#374151', roof: '#4b5563', trim: '#38bdf8', roofStyle: 'school' },
+                    { x: 660, y: 380, w: 235, h: 135, label: 'POS KAMLING RT 04', wall: '#44403c', roof: '#57534e', trim: '#fbbf24', roofStyle: 'hut' }
+                ],
+                roads: [
+                    { x: 0, y: 245, w: 960, h: 90, type: 'asphalt' },
+                    { x: 420, y: 0, w: 95, h: 560, type: 'asphalt' }
+                ],
+                props: [
+                    { kind: 'park', x: 55, y: 365, w: 275, h: 155 },
+                    { kind: 'bench', x: 105, y: 390 },
+                    { kind: 'bench', x: 225, y: 390 },
+                    { kind: 'muralWall', x: 385, y: 75, w: 165, h: 14 },
+                    { kind: 'lamp', x: 395, y: 228 },
+                    { kind: 'lamp', x: 540, y: 350 },
+                    { kind: 'trashbin', x: 625, y: 215 }
+                ],
+                hotspots: [
+                    {
+                        id: 'h1',
+                        type: 'npc',
+                        role: 'SAKSI #1 • KETUA RT',
+                        name: 'Pak Budi (Ketua RT)',
+                        x: 230, y: 215,
+                        shirtColor: '#38bdf8',
+                        shortTag: 'Saksi: Pak Budi',
+                        text: '"Awalnya Dimas cuma sekali iseng mencoret tembok karena diajak temannya. Tapi warga telanjur mencapnya \'Anak Nakal Perusak\' dan mengucilkannya."'
+                    },
+                    {
+                        id: 'h2',
+                        type: 'evidence',
+                        role: 'BARANG BUKTI FISIK',
+                        name: 'Kaleng Cat & Tembok Coretan',
+                        x: 468, y: 120,
+                        shortTag: 'Bukti: Kaleng Cat',
+                        text: 'Ditemukan coretan lama yang pudar dan banyak coretan baru bertuliskan "Si Anak Nakal". Setelah diberi stigma, Dimas mengulang aksi vandalisme secara rutin.'
+                    },
+                    {
+                        id: 'h3',
+                        type: 'npc',
+                        role: 'SAKSI #2 • GURU BK',
+                        name: 'Bu Ratna (Guru BK)',
+                        x: 720, y: 225,
+                        shirtColor: '#f472b6',
+                        shortTag: 'Saksi: Bu Ratna',
+                        text: '"Dimas sebenarnya berbakat menggambar mural. Karena semua orang menjulukinya pembuat onar, ia kehilangan percaya diri dan bertindak sesuai cap buruk itu."'
+                    }
+                ],
+                step1: {
+                    question: 'Berdasarkan kesaksian dan bukti TKP Gang Melati, bagaimana diagnosis perilaku Dimas?',
+                    options: [
+                        { text: 'Peralihan Penyimpangan Primer ke Sekunder akibat Teori Labeling (Edwin M. Lemert)', correct: true },
+                        { text: 'Penyimpangan Positif Individual karena meningkatkan estetika tembok gang', correct: false },
+                        { text: 'Penyimpangan Kelompok Terorganisir akibat Teori Anomie (Robert K. Merton)', correct: false }
+                    ],
+                    explanation: 'Tepat! Aksi pertama Dimas adalah Penyimpangan Primer (sesekali). Namun julukan negatif warga mendorongnya masuk ke Penyimpangan Sekunder (berulang). Ini inti Teori Labeling oleh Edwin M. Lemert.'
+                },
+                step2: {
+                    question: 'Surat Perintah Pengendalian Sosial apa yang paling tepat untuk memulihkan Dimas?',
+                    options: [
+                        { text: 'Pengendalian Kuratif & Persuasif melalui konseling BK serta penyaluran bakat seni mural legal', correct: true },
+                        { text: 'Ostrasisme (pengucilan penuh) agar Dimas tidak boleh keluar rumah selama setahun', correct: false },
+                        { text: 'Memasang foto wajah Dimas di papan pengumuman RT sebagai sanksi cemoohan publik', correct: false }
+                    ],
+                    explanation: 'Analisis brilian! Pendekatan Kuratif (pemulihan psikologis) dan Persuasif (dialog & ruang ekspresi legal) memutus rantai stigma negatif tanpa memperparah penyimpangan.'
+                }
+            },
+            {
+                code: 'KASUS #02',
+                title: 'Perempuan Mekanik & Ojol Bengkel Maju',
+                zoneName: 'Bengkel Maju, Pasar Pagi & Pangkalan Ojol',
+                themeColor: '#10b981',
+                envType: 'workshop',
+                groundColor: '#1a2426',
+                spawn: { x: 130, y: 420 },
+                buildings: [
+                    { x: 65, y: 40, w: 305, h: 150, label: 'BENGKEL MOTOR SARI', wall: '#1e3a5f', roof: '#1d4ed8', trim: '#10b981', roofStyle: 'garage' },
+                    { x: 600, y: 45, w: 295, h: 145, label: 'PASAR SUKAMAJU', wall: '#374151', roof: '#047857', trim: '#34d399', roofStyle: 'market' },
+                    { x: 630, y: 380, w: 265, h: 135, label: 'BALAI PELATIHAN WARGA', wall: '#3b4252', roof: '#4c566a', trim: '#fbbf24', roofStyle: 'tile' }
+                ],
+                roads: [
+                    { x: 0, y: 245, w: 960, h: 95, type: 'asphalt' },
+                    { x: 450, y: 0, w: 90, h: 560, type: 'asphalt' }
+                ],
+                props: [
+                    { kind: 'workshopApron', x: 65, y: 190, w: 305, h: 48 },
+                    { kind: 'bike', x: 115, y: 212, color: '#10b981' },
+                    { kind: 'bike', x: 165, y: 212, color: '#38bdf8' },
+                    { kind: 'tires', x: 335, y: 208 },
+                    { kind: 'marketStall', x: 620, y: 205, color: '#ef4444' },
+                    { kind: 'marketStall', x: 705, y: 205, color: '#f59e0b' },
+                    { kind: 'marketStall', x: 790, y: 205, color: '#10b981' },
+                    { kind: 'lamp', x: 425, y: 225 },
+                    { kind: 'lamp', x: 565, y: 355 }
+                ],
+                hotspots: [
+                    {
+                        id: 'h1',
+                        type: 'npc',
+                        role: 'SAKSI #1 • PELANGGAN',
+                        name: 'Pak Hendro (Warga)',
+                        x: 240, y: 218,
+                        shirtColor: '#34d399',
+                        shortTag: 'Saksi: Pak Hendro',
+                        text: '"Dulu warga mencibir Mbak Sari karena perempuan jadi mekanik bengkel dan pengemudi ojol. Sekarang bengkelnya paling laris karena kerjanya jujur dan teliti!"'
+                    },
+                    {
+                        id: 'h2',
+                        type: 'evidence',
+                        role: 'BARANG BUKTI FISIK',
+                        name: 'Sertifikat & Buku Kas Bengkel',
+                        x: 495, y: 125,
+                        shortTag: 'Bukti: Buku Kas & Piagam',
+                        text: 'Catatan keuangan menunjukkan penghasilan sah untuk membiayai sekolah adiknya serta piagam penghargaan pemberdayaan perempuan dari kelurahan.'
+                    },
+                    {
+                        id: 'h3',
+                        type: 'npc',
+                        role: 'SAKSI #2 • KADER PKK',
+                        name: 'Bu Siti (Kader PKK)',
+                        x: 740, y: 345,
+                        shirtColor: '#fbbf24',
+                        shortTag: 'Saksi: Bu Siti',
+                        text: '"Kisah Mbak Sari justru menginspirasi ibu-ibu di sini ikut pelatihan keterampilan mandiri. Stereotip lama pelan-pelan berubah positif."'
+                    }
+                ],
+                step1: {
+                    question: 'Bagaimana klasifikasi perilaku Mbak Sari dalam kajian Sosiologi?',
+                    options: [
+                        { text: 'Penyimpangan Positif — Mendobrak stereotip gender tradisional namun berdampak inovatif dan konstruktif', correct: true },
+                        { text: 'Penyimpangan Negatif Sekunder — Melanggar pembagian peran tradisional masyarakat setempat', correct: false },
+                        { text: 'Penyimpangan Kelompok Anomie — Menggunakan cara ilegal demi status ekonomi', correct: false }
+                    ],
+                    explanation: 'Benar! Penyimpangan Positif adalah perilaku yang menyimpang dari kebiasaan/stereotip umum, tetapi mengarah pada nilai-nilai maju, kemandirian, dan manfaat sosial.'
+                },
+                step2: {
+                    question: 'Langkah pengendalian/dukungan sosial apa yang tepat dilakukan lembaga masyarakat dan media?',
+                    options: [
+                        { text: 'Pendekatan Persuasif & Edukasi melalui sosialisasi media dan pelatihan warga untuk menghapus bias gender', correct: true },
+                        { text: 'Pengendalian Represif dengan menutup bengkel agar kembali ke pekerjaan domestik tradisional', correct: false },
+                        { text: 'Tindakan Fraundulens dengan meminta aparat menertibkan bengkel milik Mbak Sari', correct: false }
+                    ],
+                    explanation: 'Tepat sekali! Edukasi persuasif melalui komunitas dan media massa memperkuat adaptasi norma masyarakat terhadap inovasi sosial yang positif.'
+                }
+            },
+            {
+                code: 'KASUS #03',
+                title: 'Sindikat Joki Ujian di Warung Kopi',
+                zoneName: 'Warung Kopi Pojok & Pelataran Kampus',
+                themeColor: '#ef4444',
+                envType: 'campus',
+                groundColor: '#1d1e26',
+                spawn: { x: 140, y: 440 },
+                buildings: [
+                    { x: 55, y: 40, w: 285, h: 145, label: 'WARUNG KOPI POJOK', wall: '#5c4033', roof: '#78350f', trim: '#f97316', roofStyle: 'cafe' },
+                    { x: 580, y: 40, w: 315, h: 150, label: 'GEDUNG UJIAN SELEKSI', wall: '#1e293b', roof: '#334155', trim: '#60a5fa', roofStyle: 'campus' },
+                    { x: 630, y: 380, w: 265, h: 135, label: 'POS PENGAWAS UJIAN', wall: '#374151', roof: '#4b5563', trim: '#ef4444', roofStyle: 'tile' }
+                ],
+                roads: [
+                    { x: 0, y: 245, w: 960, h: 90, type: 'asphalt' },
+                    { x: 430, y: 0, w: 95, h: 560, type: 'asphalt' }
+                ],
+                props: [
+                    { kind: 'cafePatio', x: 55, y: 185, w: 285, h: 55 },
+                    { kind: 'cafeTable', x: 95, y: 212 },
+                    { kind: 'cafeTable', x: 155, y: 212 },
+                    { kind: 'cafeTable', x: 285, y: 212 },
+                    { kind: 'campusPlaza', x: 580, y: 190, w: 315, h: 50 },
+                    { kind: 'fountain', x: 195, y: 435 },
+                    { kind: 'lamp', x: 405, y: 225 },
+                    { kind: 'lamp', x: 545, y: 350 }
+                ],
+                hotspots: [
+                    {
+                        id: 'h1',
+                        type: 'npc',
+                        role: 'SAKSI #1 • PEMILIK WARKOP',
+                        name: 'Bang Udin (Pemilik Warkop)',
+                        x: 218, y: 216,
+                        shirtColor: '#f97316',
+                        shortTag: 'Saksi: Bang Udin',
+                        text: '"Tiap sore kelompok senior nongkrong di sini mengajari adik kelas cara memakai alat komunikasi mikro untuk menyontek massal saat ujian."'
+                    },
+                    {
+                        id: 'h2',
+                        type: 'evidence',
+                        role: 'BARANG BUKTI FISIK',
+                        name: 'Perangkat Earpiece & Grup Chat',
+                        x: 478, y: 120,
+                        shortTag: 'Bukti: Alat Joki Mikro',
+                        text: 'Ditemukan earpiece nirkabel tersembunyi serta riwayat percakapan grup yang membagikan kunci jawaban secara terorganisir.'
+                    },
+                    {
+                        id: 'h3',
+                        type: 'npc',
+                        role: 'SAKSI #2 • PENGAWAS',
+                        name: 'Pak Arif (Panitia Ujian)',
+                        x: 730, y: 218,
+                        shirtColor: '#60a5fa',
+                        shortTag: 'Saksi: Pak Arif',
+                        text: '"Peserta yang tertangkap mengaku awalnya jujur, tapi ikut terbawa setelah akrab bergaul dan diajari teknik curang oleh kelompok di warkop."'
+                    }
+                ],
+                step1: {
+                    question: 'Klasifikasi penyimpangan dan teori sosiologi manakah yang menjelaskan kasus sindikat joki ini?',
+                    options: [
+                        { text: 'Penyimpangan Kelompok & Negatif — Dijelaskan Teori Differential Association (Edwin H. Sutherland)', correct: true },
+                        { text: 'Penyimpangan Primer Individual — Dijelaskan Teori Labeling (Edwin M. Lemert)', correct: false },
+                        { text: 'Penyimpangan Positif Kolektif — Dijelaskan Teori Solidaritas Mekanik', correct: false }
+                    ],
+                    explanation: 'Sangat akurat! Teori Differential Association (Sutherland) menyatakan perilaku menyimpang dipelajari melalui interaksi akrab dengan kelompok yang memiliki nilai pelanggaran.'
+                },
+                step2: {
+                    question: 'Kombinasi pengendalian sosial apa yang harus diterbitkan untuk menuntaskan kasus ini?',
+                    options: [
+                        { text: 'Represif (diskualifikasi & sanksi hukum sindikat) serta Preventif (edukasi integritas & detektor sinyal)', correct: true },
+                        { text: 'Hanya memberikan teguran lisan tanpa membatalkan hasil ujian peserta yang curang', correct: false },
+                        { text: 'Mengandalkan gosip di kalangan siswa agar pelaku merasa malu dengan sendirinya', correct: false }
+                    ],
+                    explanation: 'Tepat! Tindakan Represif memberikan efek jera yang adil bagi kecurangan terorganisir, sementara Preventif menutup celah pelanggaran di masa mendatang.'
+                }
+            },
+            {
+                code: 'KASUS #04',
+                title: 'Geng Balap Liar Jalan Lingkar Malam',
+                zoneName: 'Jalan Protokol Lingkar Selatan & Pos Polantas',
+                themeColor: '#a855f7',
+                envType: 'highway',
+                groundColor: '#151722',
+                spawn: { x: 130, y: 440 },
+                buildings: [
+                    { x: 55, y: 40, w: 285, h: 140, label: 'DERETAN RUKO & NEON CAFE', wall: '#27272a', roof: '#3f3f46', trim: '#a855f7', roofStyle: 'neon' },
+                    { x: 600, y: 40, w: 295, h: 140, label: 'POS POLISI LALU LINTAS', wall: '#1e3a8a', roof: '#1d4ed8', trim: '#38bdf8', roofStyle: 'police' },
+                    { x: 620, y: 385, w: 275, h: 130, label: 'BENGKEL MODIFIKASI', wall: '#374151', roof: '#4b5563', trim: '#f43f5e', roofStyle: 'garage' }
+                ],
+                roads: [
+                    { x: 0, y: 235, w: 960, h: 110, type: 'highway' },
+                    { x: 430, y: 0, w: 95, h: 560, type: 'highway' }
+                ],
+                props: [
+                    { kind: 'skidMarks', x: 250, y: 270, w: 460 },
+                    { kind: 'cones', x: 375, y: 245 },
+                    { kind: 'cones', x: 575, y: 332 },
+                    { kind: 'patrolCar', x: 655, y: 205 },
+                    { kind: 'racerBike', x: 315, y: 325 },
+                    { kind: 'lamp', x: 170, y: 222 },
+                    { kind: 'lamp', x: 815, y: 222 },
+                    { kind: 'lamp', x: 405, y: 360 }
+                ],
+                hotspots: [
+                    {
+                        id: 'h1',
+                        type: 'npc',
+                        role: 'SAKSI #1 • SOPIR AMBULANS',
+                        name: 'Pak Dani (Pengemudi)',
+                        x: 220, y: 210,
+                        shirtColor: '#f87171',
+                        shortTag: 'Saksi: Pak Dani',
+                        text: '"Setiap malam Minggu puluhan motor geng memblokir jalan protokol! Pengguna jalan lain terancam keselamatannya dan tidak bisa melintas."'
+                    },
+                    {
+                        id: 'h2',
+                        type: 'evidence',
+                        role: 'BARANG BUKTI FISIK',
+                        name: 'Knalpot Bising & Garis Start Ilegal',
+                        x: 478, y: 290,
+                        shortTag: 'Bukti: Lintasan Balap Liar',
+                        text: 'Ditemukan bekas ban terbakar, blokade bambu jalan raya, serta catatan jadwal taruhan balap liar yang rutin digelar tiap akhir pekan.'
+                    },
+                    {
+                        id: 'h3',
+                        type: 'npc',
+                        role: 'SAKSI #2 • PETUGAS PATROLI',
+                        name: 'Aiptu Raka (Polantas)',
+                        x: 735, y: 210,
+                        shirtColor: '#38bdf8',
+                        shortTag: 'Saksi: Aiptu Raka',
+                        text: '"Aksi ini sudah berulang kali dilakukan secara berkelompok sehingga masuk kategori penyimpangan sekunder yang membahayakan nyawa publik."'
+                    }
+                ],
+                step1: {
+                    question: 'Berdasarkan frekuensi dan pelakunya, bagaimana kategori perilaku geng balap liar ini?',
+                    options: [
+                        { text: 'Penyimpangan Sekunder, Kelompok, dan Negatif — Dilakukan berulang-ulang dan membahayakan keselamatan umum', correct: true },
+                        { text: 'Penyimpangan Primer Individual — Karena hanya dilakukan pada malam Minggu saja', correct: false },
+                        { text: 'Penyimpangan Positif — Karena melatih ketangkasan berkendara remaja di jalan raya', correct: false }
+                    ],
+                    explanation: 'Benar! Karena dilakukan berulang kali (menjadi kebiasaan kelompok) dan meresahkan masyarakat, balap liar merupakan Penyimpangan Sekunder, Kelompok, dan Negatif.'
+                },
+                step2: {
+                    question: 'Tindakan pengendalian sosial apa yang wajib segera diterbitkan aparat kepolisian dan pemda?',
+                    options: [
+                        { text: 'Pengendalian Koersif & Represif (penertiban dan tilang di lokasi) diikuti pembinaan Kuratif bersama orang tua', correct: true },
+                        { text: 'Membiarkan balap liar berlangsung agar remaja bebas berekspresi di jalan protokol', correct: false },
+                        { text: 'Hanya mengandalkan teguran halus tanpa menyita kendaraan yang tidak layak jalan', correct: false }
+                    ],
+                    explanation: 'Tepat! Pelanggaran yang mengancam nyawa publik memerlukan tindakan Koersif/Represif (paksaan hukum/tilang) agar ketertiban pulih, lalu dilanjutkan pembinaan Kuratif.'
+                }
+            },
+            {
+                code: 'KASUS #05',
+                title: 'Investasi Bodong & Sanksi Kampung Adat',
+                zoneName: 'Balai Adat Karangjati, Sungai Desa & Polsek',
+                themeColor: '#eab308',
+                envType: 'village',
+                groundColor: '#19241e',
+                spawn: { x: 140, y: 430 },
+                buildings: [
+                    { x: 60, y: 40, w: 285, h: 145, label: 'KEDIAMAN MEWAH PELAKU', wall: '#422006', roof: '#713f12', trim: '#eab308', roofStyle: 'mansion' },
+                    { x: 585, y: 40, w: 310, h: 145, label: 'BALAI ADAT KARANGJATI', wall: '#451a03', roof: '#92400e', trim: '#f59e0b', roofStyle: 'joglo' },
+                    { x: 630, y: 380, w: 265, h: 135, label: 'KANTOR KEPOLISIAN SEKTOR', wall: '#1e3a8a', roof: '#1d4ed8', trim: '#60a5fa', roofStyle: 'police' }
+                ],
+                roads: [
+                    { x: 0, y: 245, w: 960, h: 90, type: 'cobble' },
+                    { x: 430, y: 0, w: 95, h: 560, type: 'cobble' }
+                ],
+                props: [
+                    { kind: 'river', x: 0, y: 515, w: 960, h: 45 },
+                    { kind: 'bridge', x: 425, y: 505, w: 105, h: 55 },
+                    { kind: 'riceField', x: 55, y: 365, w: 295, h: 130 },
+                    { kind: 'gong', x: 635, y: 205 },
+                    { kind: 'lantern', x: 595, y: 192 },
+                    { kind: 'lantern', x: 885, y: 192 },
+                    { kind: 'lamp', x: 405, y: 225 }
+                ],
+                hotspots: [
+                    {
+                        id: 'h1',
+                        type: 'npc',
+                        role: 'SAKSI #1 • KORBAN WARGA',
+                        name: 'Bu Wati (Warga Desa)',
+                        x: 215, y: 220,
+                        shirtColor: '#fb7185',
+                        shortTag: 'Saksi: Bu Wati',
+                        text: '"Pak Jaya terobsesi cepat kaya raya lalu menipu uang tabungan puluhan warga lewat investasi bodong. Warga sepakat mengucilkannya dari semua kegiatan desa!"'
+                    },
+                    {
+                        id: 'h2',
+                        type: 'evidence',
+                        role: 'BARANG BUKTI FISIK',
+                        name: 'Kontrak Palsu & Surat Aduan RW',
+                        x: 478, y: 120,
+                        shortTag: 'Bukti: Kontrak & Surat RW',
+                        text: 'Ditemukan dokumen investasi fiktif (White-Collar Crime) serta surat resmi Ketua RW yang meminta bantuan Pemuka Adat dan Polisi menindak pelaku.'
+                    },
+                    {
+                        id: 'h3',
+                        type: 'npc',
+                        role: 'SAKSI #2 • PEMUKA ADAT',
+                        name: 'Mbah Karto (Tokoh Adat)',
+                        x: 735, y: 220,
+                        shirtColor: '#facc15',
+                        shortTag: 'Saksi: Mbah Karto',
+                        text: '"Karena pelaku menolak mengembalikan uang warga, pengurus kampung meminta bantuan lembaga adat dan aparat hukum agar keadilan ditegakkan."'
+                    }
+                ],
+                step1: {
+                    question: 'Teori sosiologi dan jenis kejahatan apakah yang tampak pada tindakan penipuan investasi Pak Jaya?',
+                    options: [
+                        { text: 'Teori Anomie Robert K. Merton (adaptasi Innovation) & Kejahatan Kerah Putih (White-Collar Crime)', correct: true },
+                        { text: 'Penyimpangan Primer & Penyimpangan Positif dalam pengelolaan keuangan desa', correct: false },
+                        { text: 'Teori Labeling akibat salah paham administrasi warga kampung', correct: false }
+                    ],
+                    explanation: 'Sempurna! Pelaku mengejar tujuan kekayaan materiil tetapi menempuh jalan pintas ilegal (Innovation dalam Teori Anomie Merton) dengan menyalahgunakan status sosialnya (White-Collar Crime).'
+                },
+                step2: {
+                    question: 'Dua mekanisme pengendalian sosial berupa pengucilan warga dari pergaulan dan pelibatan pemuka adat/polisi disebut...',
+                    options: [
+                        { text: 'Ostrasisme (pengucilan dari interaksi sosial) dan Fraundulens (meminta bantuan pihak yang lebih berwibawa/berwenang)', correct: true },
+                        { text: 'Preventif (pencegahan dini) dan Persuasif (nasihat lembut tanpa sanksi)', correct: false },
+                        { text: 'Gosip (desas-desus sembunyi) dan Rehabilitasi Medis', correct: false }
+                    ],
+                    explanation: 'Luar biasa! Ostrasisme adalah sanksi pengucilan dari pergaulan masyarakat, sedangkan Fraundulens adalah cara pengendalian dengan meminta bantuan pihak ketiga yang lebih berwibawa atau berwenang.'
+                }
+            }
+        ];
+
+        /* =========================================================================
+           3. STATE GAME & KONTROL INPUT 2D
+           ========================================================================= */
+        const state = {
+            agentName: 'Inspektur Arya',
+            caseIndex: 0,
+            score: 0,
+            correctAnswers: 0,
+            totalQuestions: 0,
+            casePerfect: true,
+            caseHistory: [],
+            collectedClues: [false, false, false],
+            activeDialogueHotspot: null,
+            deductionStep: 1, // 1 = Diagnosis Teori, 2 = Pengendalian Sosial
+            isModalOpen: false,
+            player: {
+                x: 140,
+                y: 430,
+                vx: 0,
+                vy: 0,
+                speed: 235,
+                radius: 16,
+                facing: 'right',
+                walkCycle: 0
+            },
+            nearestHotspot: null,
+            animTime: 0
+        };
+
+        const keys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
+
+        /* =========================================================================
+           4. RENDERER KANVAS 2D TOP-DOWN & LOOP 60FPS
+           ========================================================================= */
+        const canvas = document.getElementById('tkpCanvas');
+        const ctx = canvas.getContext('2d');
+        let lastFrameTime = 0;
+
+        function resizeCanvas() {
+            const wrapper = document.getElementById('gameCanvasWrapper');
+            if (!wrapper) return;
+            const rect = wrapper.getBoundingClientRect();
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width = Math.max(300, Math.floor(rect.width * dpr));
+            canvas.height = Math.max(240, Math.floor(rect.height * dpr));
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function updatePlayer(dt) {
+            if (state.isModalOpen) return;
+
+            let dx = 0;
+            let dy = 0;
+            if (keys.up) dy -= 1;
+            if (keys.down) dy += 1;
+            if (keys.left) dx -= 1;
+            if (keys.right) dx += 1;
+
+            if (dx !== 0 || dy !== 0) {
+                const len = Math.hypot(dx, dy);
+                dx /= len;
+                dy /= len;
+
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    state.player.facing = dx > 0 ? 'right' : 'left';
+                } else {
+                    state.player.facing = dy > 0 ? 'down' : 'up';
+                }
+
+                const nextX = state.player.x + dx * state.player.speed * dt;
+                const nextY = state.player.y + dy * state.player.speed * dt;
+
+                // Batas tepi peta TKP
+                const margin = 26;
+                const clampedX = Math.max(margin, Math.min(MAP_W - margin, nextX));
+                const clampedY = Math.max(margin, Math.min(MAP_H - margin, nextY));
+
+                // Cek tabrakan dengan bangunan
+                const c = casesData[state.caseIndex];
+                if (!collidesWithBuildings(clampedX, state.player.y, state.player.radius, c.buildings)) {
+                    state.player.x = clampedX;
+                }
+                if (!collidesWithBuildings(state.player.x, clampedY, state.player.radius, c.buildings)) {
+                    state.player.y = clampedY;
+                }
+
+                const prevStep = Math.floor(state.player.walkCycle / Math.PI);
+                state.player.walkCycle += dt * 11;
+                const curStep = Math.floor(state.player.walkCycle / Math.PI);
+                if (curStep !== prevStep) playSFX('step');
+            } else {
+                state.player.walkCycle = 0;
+            }
+
+            // Deteksi jarak ke hotspot terdekat
+            const c = casesData[state.caseIndex];
+            let closest = null;
+            let minDist = 68;
+            c.hotspots.forEach((hs, idx) => {
+                const d = Math.hypot(state.player.x - hs.x, state.player.y - hs.y);
+                if (d < minDist) {
+                    minDist = d;
+                    closest = { ...hs, index: idx };
+                }
+            });
+            state.nearestHotspot = closest;
+
+            const interactBtn = document.getElementById('btnInteractTouch');
+            const interactLabel = document.getElementById('interactBtnLabel');
+            if (closest) {
+                interactBtn.classList.add('ring-4', 'ring-amber-300/60');
+                interactLabel.textContent = closest.type === 'npc' ? 'WAWANCARA [SPASI]' : 'PERIKSA BUKTI [SPASI]';
+            } else {
+                interactBtn.classList.remove('ring-4', 'ring-amber-300/60');
+                interactLabel.textContent = 'PERIKSA [SPASI]';
+            }
+        }
+
+        function collidesWithBuildings(px, py, r, buildings) {
+            for (const b of buildings) {
+                const closestX = Math.max(b.x, Math.min(px, b.x + b.w));
+                const closestY = Math.max(b.y, Math.min(py, b.y + b.h));
+                const dist = Math.hypot(px - closestX, py - closestY);
+                if (dist < r) return true;
+            }
+            return false;
+        }
+
+        function draw2DWorld() {
+            const c = casesData[state.caseIndex];
+            const scaleX = canvas.width / MAP_W;
+            const scaleY = canvas.height / MAP_H;
+
+            ctx.save();
+            ctx.scale(scaleX, scaleY);
+
+            // 1. Latar Permukaan Lingkungan Khusus Tiap Zona Kasus
+            ctx.fillStyle = c.groundColor || '#1b222c';
+            ctx.fillRect(0, 0, MAP_W, MAP_H);
+
+            // Tekstur ubin / paving trotoar
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.lineWidth = 1;
+            for (let gx = 0; gx < MAP_W; gx += 32) {
+                ctx.beginPath();
+                ctx.moveTo(gx, 0);
+                ctx.lineTo(gx, MAP_H);
+                ctx.stroke();
+            }
+            for (let gy = 0; gy < MAP_H; gy += 32) {
+                ctx.beginPath();
+                ctx.moveTo(0, gy);
+                ctx.lineTo(MAP_W, gy);
+                ctx.stroke();
+            }
+
+            // 2. Jalan Raya / Jalan Desa dengan Trotoar & Marka Lengkap
+            c.roads.forEach(rd => {
+                // Trotoar tepi jalan
+                ctx.fillStyle = '#334155';
+                if (rd.w > rd.h) {
+                    ctx.fillRect(rd.x, rd.y - 8, rd.w, rd.h + 16);
+                } else {
+                    ctx.fillRect(rd.x - 8, rd.y, rd.w + 16, rd.h);
+                }
+
+                // Permukaan jalan
+                ctx.fillStyle = rd.type === 'cobble' ? '#292524' : '#0f131a';
+                ctx.fillRect(rd.x, rd.y, rd.w, rd.h);
+
+                if (rd.type === 'cobble') {
+                    // Batu jalan desa
+                    ctx.fillStyle = 'rgba(168, 162, 158, 0.12)';
+                    for (let bx = rd.x + 8; bx < rd.x + rd.w - 8; bx += 22) {
+                        for (let by = rd.y + 8; by < rd.y + rd.h - 8; by += 18) {
+                            ctx.beginPath();
+                            ctx.roundRect(bx, by, 14, 10, 3);
+                            ctx.fill();
+                        }
+                    }
+                } else {
+                    // Garis tepi putih jalan aspal
+                    ctx.strokeStyle = 'rgba(226, 232, 240, 0.25)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(rd.x + 2, rd.y + 2, rd.w - 4, rd.h - 4);
+
+                    // Garis putus-putus kuning tengah jalan
+                    ctx.save();
+                    ctx.strokeStyle = rd.type === 'highway' ? 'rgba(250, 204, 21, 0.65)' : 'rgba(251, 191, 36, 0.4)';
+                    ctx.setLineDash([20, 16]);
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    if (rd.w > rd.h) {
+                        ctx.moveTo(rd.x, rd.y + rd.h / 2);
+                        ctx.lineTo(rd.x + rd.w, rd.y + rd.h / 2);
+                    } else {
+                        ctx.moveTo(rd.x + rd.w / 2, rd.y);
+                        ctx.lineTo(rd.x + rd.w / 2, rd.y + rd.h);
+                    }
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            });
+
+            // Zebra Cross di perempatan jalan
+            ctx.fillStyle = 'rgba(241, 245, 249, 0.22)';
+            for (let zx = 432; zx <= 502; zx += 14) {
+                ctx.fillRect(zx, 224, 8, 16);
+                ctx.fillRect(zx, 340, 8, 16);
+            }
+
+            // 3. Properti Lingkungan Unik Tiap Zona Kasus
+            drawZoneProps(ctx, c.props || []);
+
+            // 4. Garis Polisi (Police Line) Berkedip di Sekitar TKP Utama
+            const tapePulse = 0.7 + Math.sin(state.animTime * 5) * 0.3;
+            ctx.save();
+            ctx.strokeStyle = `rgba(245, 158, 11, ${tapePulse})`;
+            ctx.setLineDash([12, 8]);
+            ctx.lineWidth = 3;
+            ctx.strokeRect(365, 78, 210, 148);
+            // Tiang pembatas garis polisi
+            [
+                [365, 78], [575, 78], [365, 226], [575, 226]
+            ].forEach(([px, py]) => {
+                ctx.fillStyle = '#fbbf24';
+                ctx.beginPath();
+                ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.restore();
+
+            // 5. Bangunan Berarsitektur Kontekstual Indonesia
+            c.buildings.forEach(b => drawDetailedBuilding(ctx, b));
+
+            // 6. Pohon Rindang Kota & Desa
+            const decorTrees = [
+                { x: 355, y: 465 }, { x: 560, y: 465 }, { x: 355, y: 55 }, { x: 560, y: 55 }
+            ];
+            decorTrees.forEach(tr => {
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.beginPath();
+                ctx.arc(tr.x + 5, tr.y + 6, 19, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#14532d';
+                ctx.beginPath();
+                ctx.arc(tr.x, tr.y, 18, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#16a34a';
+                ctx.beginPath();
+                ctx.arc(tr.x - 3, tr.y - 3, 13, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#4ade80';
+                ctx.beginPath();
+                ctx.arc(tr.x - 6, tr.y - 6, 6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 7. Gambar 3 Hotspot (2 Saksi NPC + 1 Barang Bukti)
+            c.hotspots.forEach((hs, idx) => {
+                const collected = state.collectedClues[idx];
+                const isNear = state.nearestHotspot && state.nearestHotspot.index === idx;
+                const pulse = Math.sin(state.animTime * 4 + idx) * 4;
+
+                // Lingkaran radar di lantai
+                ctx.beginPath();
+                ctx.arc(hs.x, hs.y, 26 + (collected ? 0 : pulse), 0, Math.PI * 2);
+                ctx.fillStyle = collected
+                    ? 'rgba(16, 185, 129, 0.18)'
+                    : (isNear ? 'rgba(251, 191, 36, 0.38)' : 'rgba(245, 158, 11, 0.2)');
+                ctx.fill();
+                ctx.lineWidth = 2.2;
+                ctx.strokeStyle = collected ? '#10b981' : '#f59e0b';
+                ctx.stroke();
+
+                if (hs.type === 'npc') {
+                    // Bayangan NPC
+                    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                    ctx.beginPath();
+                    ctx.ellipse(hs.x, hs.y + 11, 12, 5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Tubuh NPC Saksi Warga
+                    ctx.fillStyle = hs.shirtColor || '#38bdf8';
+                    ctx.beginPath();
+                    ctx.arc(hs.x, hs.y, 13, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Kepala NPC
+                    ctx.fillStyle = '#fde68a';
+                    ctx.beginPath();
+                    ctx.arc(hs.x, hs.y - 3, 7.5, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Sprite Barang Bukti Fisik (Koper Bukti Kuning)
+                    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+                    ctx.fillRect(hs.x - 10, hs.y - 7, 24, 20);
+
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.beginPath();
+                    ctx.roundRect(hs.x - 13, hs.y - 11, 26, 22, 4);
+                    ctx.fill();
+                    ctx.strokeStyle = '#111827';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#111827';
+                    ctx.font = 'bold 13px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('?', hs.x, hs.y + 5);
+                }
+
+                // Tanda Seru / Centang di atas Hotspot
+                ctx.fillStyle = collected ? '#10b981' : '#fbbf24';
+                ctx.font = 'bold 14px "Courier Prime", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(collected ? '✓' : '!', hs.x, hs.y - 23 - (collected ? 0 : pulse * 0.5));
+
+                // Label Nama Singkat di Bawah Hotspot
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+                ctx.beginPath();
+                ctx.roundRect(hs.x - 56, hs.y + 18, 112, 18, 4);
+                ctx.fill();
+                ctx.strokeStyle = collected ? 'rgba(16, 185, 129, 0.5)' : 'rgba(245, 158, 11, 0.45)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = collected ? '#6ee7b7' : '#fde68a';
+                ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
+                ctx.fillText(hs.shortTag, hs.x, hs.y + 30);
+            });
+
+            // 8. Sorotan Senter / Aura Detektif & Sprite Karakter Detektif BIS
+            drawDetectiveSprite(ctx, state.player);
+
+            // 9. Watermark Nama Zona di Sudut Peta
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+            ctx.beginPath();
+            ctx.roundRect(14, 12, 285, 24, 6);
+            ctx.fill();
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 11px "Courier Prime", monospace';
+            ctx.textAlign = 'left';
+            ctx.fillText(`📍 ${c.zoneName.toUpperCase()}`, 24, 28);
+
+            // 10. Prompt Interaksi Melayang di Atas Kepala Detektif saat Dekat Hotspot
+            if (state.nearestHotspot && !state.isModalOpen) {
+                const promptText = state.nearestHotspot.type === 'npc'
+                    ? 'Tekan [SPASI] Wawancara'
+                    : 'Tekan [SPASI] Periksa Bukti';
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.roundRect(state.player.x - 74, state.player.y - 48, 148, 22, 6);
+                ctx.fill();
+                ctx.fillStyle = '#111827';
+                ctx.font = 'bold 11px "Plus Jakarta Sans", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(promptText, state.player.x, state.player.y - 33);
+            }
+
+            ctx.restore();
+        }
+
+        function drawDetailedBuilding(ctx, b) {
+            // Bayangan bangunan
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.beginPath();
+            ctx.roundRect(b.x + 8, b.y + 10, b.w, b.h, 6);
+            ctx.fill();
+
+            // Dinding utama
+            ctx.fillStyle = b.wall;
+            ctx.beginPath();
+            ctx.roundRect(b.x, b.y, b.w, b.h, 6);
+            ctx.fill();
+
+            // Atap bertingkat
+            ctx.fillStyle = b.roof;
+            ctx.beginPath();
+            ctx.roundRect(b.x + 8, b.y + 8, b.w - 16, b.h - 28, 4);
+            ctx.fill();
+
+            // Garis bubungan atap
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(b.x + 22, b.y + (b.h - 20) / 2);
+            ctx.lineTo(b.x + b.w - 22, b.y + (b.h - 20) / 2);
+            ctx.stroke();
+
+            // Aksen atap khusus sesuai tipe bangunan
+            if (b.roofStyle === 'joglo') {
+                // Atap limasan emas khas Balai Adat
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(b.x + 28, b.y + 22, b.w - 56, b.h - 56);
+            } else if (b.roofStyle === 'police') {
+                // Lampu strobo merah-biru di atas Pos Polisi
+                const flash = Math.floor(state.animTime * 6) % 2 === 0;
+                ctx.fillStyle = flash ? '#ef4444' : '#3b82f6';
+                ctx.fillRect(b.x + b.w / 2 - 18, b.y + 14, 16, 7);
+                ctx.fillStyle = flash ? '#3b82f6' : '#ef4444';
+                ctx.fillRect(b.x + b.w / 2 + 2, b.y + 14, 16, 7);
+            } else if (b.roofStyle === 'neon') {
+                // Papan neon kafe malam
+                ctx.strokeStyle = '#c084fc';
+                ctx.lineWidth = 2.5;
+                ctx.strokeRect(b.x + 14, b.y + 14, b.w - 28, b.h - 40);
+            }
+
+            // Border luar bangunan
+            ctx.strokeStyle = b.trim || '#64748b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(b.x, b.y, b.w, b.h, 6);
+            ctx.stroke();
+
+            // Papan Nama Bangunan
+            ctx.fillStyle = '#090d16';
+            ctx.beginPath();
+            ctx.roundRect(b.x + 14, b.y + b.h - 33, b.w - 28, 23, 4);
+            ctx.fill();
+            ctx.strokeStyle = b.trim || '#fbbf24';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            ctx.fillStyle = '#f8fafc';
+            ctx.font = 'bold 11px "Courier Prime", monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h - 18);
+        }
+
+        function drawZoneProps(ctx, props) {
+            props.forEach(p => {
+                if (p.kind === 'park') {
+                    // Taman rumput hijau warga
+                    ctx.fillStyle = '#14532d';
+                    ctx.beginPath();
+                    ctx.roundRect(p.x, p.y, p.w, p.h, 12);
+                    ctx.fill();
+                    ctx.strokeStyle = '#22c55e';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    // Jalan setapak taman
+                    ctx.fillStyle = '#475569';
+                    ctx.fillRect(p.x + 18, p.y + p.h / 2 - 12, p.w - 36, 24);
+                } else if (p.kind === 'bench') {
+                    // Bangku kayu taman
+                    ctx.fillStyle = '#92400e';
+                    ctx.fillRect(p.x, p.y, 44, 14);
+                    ctx.strokeStyle = '#fde68a';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(p.x, p.y, 44, 14);
+                } else if (p.kind === 'muralWall') {
+                    // Dinding mural & coretan warna-warni di Gang Melati
+                    ctx.fillStyle = '#cbd5e1';
+                    ctx.fillRect(p.x, p.y, p.w, p.h);
+                    const splashes = ['#ef4444', '#3b82f6', '#eab308', '#a855f7', '#10b981'];
+                    splashes.forEach((col, i) => {
+                        ctx.fillStyle = col;
+                        ctx.beginPath();
+                        ctx.arc(p.x + 22 + i * 30, p.y + 7, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                } else if (p.kind === 'workshopApron') {
+                    // Pelataran beton bengkel & ceceran oli
+                    ctx.fillStyle = '#27303f';
+                    ctx.fillRect(p.x, p.y, p.w, p.h);
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+                    ctx.beginPath();
+                    ctx.ellipse(p.x + 95, p.y + 24, 16, 8, 0.2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.kind === 'bike') {
+                    // Motor pelanggan / ojol terparkir
+                    ctx.fillStyle = p.color || '#10b981';
+                    ctx.beginPath();
+                    ctx.roundRect(p.x - 8, p.y - 14, 16, 28, 5);
+                    ctx.fill();
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(p.x - 10, p.y - 8, 20, 4);
+                } else if (p.kind === 'tires') {
+                    // Tumpukan ban bekas bengkel
+                    [0, 12].forEach(dx => {
+                        ctx.strokeStyle = '#0f172a';
+                        ctx.lineWidth = 5;
+                        ctx.beginPath();
+                        ctx.arc(p.x + dx, p.y, 8, 0, Math.PI * 2);
+                        ctx.stroke();
+                    });
+                } else if (p.kind === 'marketStall') {
+                    // Tenda lapak pasar
+                    ctx.fillStyle = p.color || '#ef4444';
+                    ctx.beginPath();
+                    ctx.roundRect(p.x, p.y, 64, 28, 4);
+                    ctx.fill();
+                    ctx.strokeStyle = '#f8fafc';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                } else if (p.kind === 'cafePatio' || p.kind === 'campusPlaza') {
+                    // Teras paving warkop / kampus
+                    ctx.fillStyle = p.kind === 'cafePatio' ? '#292524' : '#1e293b';
+                    ctx.fillRect(p.x, p.y, p.w, p.h);
+                } else if (p.kind === 'cafeTable') {
+                    // Meja bundar & kursi warkop
+                    ctx.fillStyle = '#d97706';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fef3c7';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                } else if (p.kind === 'fountain') {
+                    // Air mancur taman kampus
+                    ctx.fillStyle = '#0284c7';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 34, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#94a3b8';
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+                    const ripple = (state.animTime * 18) % 24;
+                    ctx.strokeStyle = 'rgba(224, 242, 254, 0.55)';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 6 + ripple, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else if (p.kind === 'skidMarks') {
+                    // Bekas ban terbakar balap liar
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.65)';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.bezierCurveTo(p.x + 140, p.y - 16, p.x + 300, p.y + 18, p.x + p.w, p.y - 4);
+                    ctx.stroke();
+                } else if (p.kind === 'cones') {
+                    // Traffic cone oranye
+                    [0, 26, 52].forEach(dx => {
+                        ctx.fillStyle = '#f97316';
+                        ctx.beginPath();
+                        ctx.arc(p.x + dx, p.y, 6, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.fillStyle = '#fff';
+                        ctx.beginPath();
+                        ctx.arc(p.x + dx, p.y, 2.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                } else if (p.kind === 'patrolCar') {
+                    // Mobil patroli polisi dengan strobo berkedip
+                    ctx.fillStyle = '#f8fafc';
+                    ctx.beginPath();
+                    ctx.roundRect(p.x, p.y, 56, 26, 6);
+                    ctx.fill();
+                    ctx.fillStyle = '#1e3a8a';
+                    ctx.fillRect(p.x + 12, p.y + 3, 32, 20);
+                    const blink = Math.floor(state.animTime * 8) % 2 === 0;
+                    ctx.fillStyle = blink ? '#ef4444' : '#3b82f6';
+                    ctx.beginPath();
+                    ctx.arc(p.x + 28, p.y + 13, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.kind === 'racerBike') {
+                    // Motor balap liar di pinggir jalan
+                    ctx.fillStyle = '#a855f7';
+                    ctx.beginPath();
+                    ctx.roundRect(p.x, p.y, 30, 14, 4);
+                    ctx.fill();
+                } else if (p.kind === 'river') {
+                    // Sungai kampung mengalir
+                    ctx.fillStyle = '#0369a1';
+                    ctx.fillRect(p.x, p.y, p.w, p.h);
+                    ctx.strokeStyle = 'rgba(186, 230, 253, 0.35)';
+                    ctx.lineWidth = 2;
+                    const shift = (state.animTime * 35) % 60;
+                    for (let wx = -60 + shift; wx < p.w; wx += 60) {
+                        ctx.beginPath();
+                        ctx.moveTo(wx, p.y + 16);
+                        ctx.lineTo(wx + 28, p.y + 16);
+                        ctx.moveTo(wx + 15, p.y + 32);
+                        ctx.lineTo(wx + 42, p.y + 32);
+                        ctx.stroke();
+                    }
+                } else if (p.kind === 'bridge') {
+                    // Jembatan kayu desa
+                    ctx.fillStyle = '#78350f';
+                    ctx.fillRect(p.x, p.y, p.w, p.h);
+                    ctx.strokeStyle = '#fbbf24';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(p.x, p.y, p.w, p.h);
+                } else if (p.kind === 'riceField') {
+                    // Petak sawah hijau subur di desa
+                    ctx.fillStyle = '#166534';
+                    ctx.beginPath();
+                    ctx.roundRect(p.x, p.y, p.w, p.h, 8);
+                    ctx.fill();
+                    ctx.strokeStyle = '#4ade80';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    for (let ry = p.y + 18; ry < p.y + p.h - 10; ry += 22) {
+                        ctx.beginPath();
+                        ctx.moveTo(p.x + 12, ry);
+                        ctx.lineTo(p.x + p.w - 12, ry);
+                        ctx.stroke();
+                    }
+                } else if (p.kind === 'gong') {
+                    // Gamelan / Gong Balai Adat
+                    ctx.strokeStyle = '#b45309';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(p.x - 14, p.y - 12, 28, 24);
+                    ctx.fillStyle = '#facc15';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 9, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.kind === 'lamp' || p.kind === 'lantern') {
+                    // Lampu jalan / lentera malam dengan pendar cahaya hangat
+                    const glow = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, 46);
+                    glow.addColorStop(0, 'rgba(253, 224, 71, 0.35)');
+                    glow.addColorStop(1, 'rgba(253, 224, 71, 0)');
+                    ctx.fillStyle = glow;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 46, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = p.kind === 'lantern' ? '#f97316' : '#fef08a';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.kind === 'trashbin') {
+                    ctx.fillStyle = '#15803d';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        function drawDetectiveSprite(ctx, p) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+
+            // Sorotan senter detektif sesuai arah hadap
+            let angle = 0;
+            if (p.facing === 'down') angle = Math.PI / 2;
+            else if (p.facing === 'left') angle = Math.PI;
+            else if (p.facing === 'up') angle = -Math.PI / 2;
+
+            ctx.save();
+            ctx.rotate(angle);
+            const beamGrad = ctx.createRadialGradient(12, 0, 4, 12, 0, 120);
+            beamGrad.addColorStop(0, 'rgba(253, 224, 71, 0.28)');
+            beamGrad.addColorStop(1, 'rgba(253, 224, 71, 0)');
+            ctx.fillStyle = beamGrad;
+            ctx.beginPath();
+            ctx.moveTo(8, 0);
+            ctx.arc(8, 0, 120, -0.38, 0.38);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+
+            // Animasi ayunan langkah kaki
+            const bob = Math.sin(p.walkCycle) * 2.5;
+            const footSwing = Math.sin(p.walkCycle) * 4;
+
+            // Bayangan bawah karakter
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+            ctx.beginPath();
+            ctx.ellipse(0, 14, 13, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Sepatu
+            ctx.fillStyle = '#1e1b18';
+            ctx.beginPath();
+            ctx.arc(-5, 11 + footSwing * 0.5, 4, 0, Math.PI * 2);
+            ctx.arc(5, 11 - footSwing * 0.5, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mantel Detektif (Trench Coat)
+            ctx.fillStyle = '#92400e';
+            ctx.beginPath();
+            ctx.arc(0, bob, 14, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Topi Fedora Detektif (Top-down view)
+            ctx.fillStyle = '#451a03';
+            ctx.beginPath();
+            ctx.ellipse(0, -2 + bob, 13, 11, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 1.8;
+            ctx.stroke();
+
+            ctx.fillStyle = '#78350f';
+            ctx.beginPath();
+            ctx.ellipse(0, -2 + bob, 8, 6.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastFrameTime) lastFrameTime = timestamp;
+            const dt = Math.min((timestamp - lastFrameTime) / 1000, 0.05);
+            lastFrameTime = timestamp;
+
+            state.animTime += dt;
+
+            if (!document.getElementById('gameplayScreen').classList.contains('hidden')) {
+                updatePlayer(dt);
+                draw2DWorld();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        /* =========================================================================
+           5. INTERAKSI TKP & MEJA ANALISIS DEDUKSI SOSIOLOGI
+           ========================================================================= */
+        function triggerInteraction() {
+            // Jika dialog saksi/bukti sedang terbuka, tombol spasi menutupnya
+            const dialogueBox = document.getElementById('dialogueOverlay');
+            if (!dialogueBox.classList.contains('hidden')) {
+                closeDialogueOverlay();
+                return;
+            }
+
+            if (state.isModalOpen || !state.nearestHotspot) return;
+
+            const hs = state.nearestHotspot;
+            const idx = hs.index;
+
+            if (!state.collectedClues[idx]) {
+                state.collectedClues[idx] = true;
+                state.score += 50;
+                playSFX('clue');
+                updateGameplayHUD();
+            } else {
+                playSFX('step');
+            }
+
+            // Tampilkan dialog kesaksian / temuan bukti
+            const avatar = document.getElementById('dialogueAvatar');
+            avatar.innerHTML = hs.type === 'npc'
+                ? '<i class="fa-solid fa-user-tie"></i>'
+                : '<i class="fa-solid fa-magnifying-glass"></i>';
+            document.getElementById('dialogueSpeakerRole').textContent = hs.role;
+            document.getElementById('dialogueSpeakerName').textContent = hs.name;
+            document.getElementById('dialogueText').textContent = hs.text;
+
+            dialogueBox.classList.remove('hidden');
+            state.isModalOpen = true;
+        }
+
+        function closeDialogueOverlay() {
+            playSFX('step');
+            document.getElementById('dialogueOverlay').classList.add('hidden');
+            state.isModalOpen = false;
+
+            // Jika seluruh 3 petunjuk TKP sudah terkumpul, buka Meja Analisis
+            const allCollected = state.collectedClues.every(Boolean);
+            if (allCollected) {
+                document.getElementById('openDeductionBtn').classList.remove('hidden');
+                document.getElementById('bottomHintText').textContent =
+                    'Semua petunjuk TKP terkumpul! Selesaikan analisis di Meja Deduksi Sosiologi.';
+                setTimeout(() => {
+                    openDeductionModal();
+                }, 260);
+            }
+        }
+
+        function openDeductionModal() {
+            const c = casesData[state.caseIndex];
+            state.isModalOpen = true;
+            document.getElementById('deductionCaseCode').textContent = c.code;
+            document.getElementById('deductionCaseName').textContent = c.title;
+
+            // Tampilkan ringkasan 3 petunjuk yang ditemukan di lapangan
+            const summaryBox = document.getElementById('collectedCluesSummary');
+            summaryBox.innerHTML = c.hotspots.map(hs => `
+                <div class="bg-white/85 border border-stone-300 rounded-xl p-2.5 text-xs">
+                    <div class="font-typewriter font-bold text-[10px] text-amber-800 uppercase">${hs.role}</div>
+                    <div class="font-extrabold text-stone-900 mb-1">${hs.name}</div>
+                    <p class="text-stone-700 text-[11px] leading-snug line-clamp-3">${hs.text}</p>
+                </div>
+            `).join('');
+
+            renderDeductionStep(state.deductionStep);
+            document.getElementById('deductionModal').classList.remove('hidden');
+        }
+
+        function closeDeductionModal() {
+            document.getElementById('deductionModal').classList.add('hidden');
+            state.isModalOpen = false;
+        }
+
+        function renderDeductionStep(stepNum) {
+            const c = casesData[state.caseIndex];
+            const stepData = stepNum === 1 ? c.step1 : c.step2;
+
+            document.getElementById('deductionStepTag').textContent = stepNum === 1
+                ? 'TAHAP 1/2 • DIAGNOSIS PROFIL & TEORI PENYIMPANGAN'
+                : 'TAHAP 2/2 • SURAT PERINTAH PENGENDALIAN SOSIAL';
+            document.getElementById('deductionQuestionText').textContent = stepData.question;
+            document.getElementById('deductionFeedbackBox').classList.add('hidden');
+
+            const optionsBox = document.getElementById('deductionOptionsBox');
+            optionsBox.innerHTML = '';
+
+            // Acak urutan opsi agar menantang
+            const shuffled = [...stepData.options].sort(() => Math.random() - 0.5);
+            const letters = ['A', 'B', 'C'];
+
+            shuffled.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.dataset.correct = opt.correct ? 'true' : 'false';
+                btn.className = 'option-btn w-full text-left p-3 sm:p-3.5 rounded-xl flex items-start gap-3 text-xs sm:text-sm font-semibold cursor-pointer';
+                btn.innerHTML = `
+                    <span class="w-6 h-6 rounded-md bg-amber-500/20 border border-amber-500/50 text-amber-400 font-typewriter font-bold flex items-center justify-center shrink-0 mt-0.5">${letters[i]}</span>
+                    <span class="leading-snug">${opt.text}</span>
+                `;
+                btn.onclick = () => evaluateDeductionAnswer(btn, opt.correct, stepData.explanation);
+                optionsBox.appendChild(btn);
+            });
+        }
+
+        function evaluateDeductionAnswer(clickedBtn, isCorrect, explanation) {
+            const allBtns = document.querySelectorAll('#deductionOptionsBox button');
+            allBtns.forEach(b => {
+                b.disabled = true;
+                b.classList.remove('cursor-pointer');
+                if (b.dataset.correct === 'true') b.classList.add('correct');
+            });
+
+            state.totalQuestions++;
+            const fbBox = document.getElementById('deductionFeedbackBox');
+            const fbIcon = document.getElementById('deductionFbIcon');
+            const fbTitle = document.getElementById('deductionFbTitle');
+            const fbDesc = document.getElementById('deductionFbDesc');
+
+            fbBox.classList.remove('hidden', 'bg-emerald-950/80', 'border-emerald-500', 'bg-red-950/80', 'border-red-500');
+
+            if (isCorrect) {
+                playSFX('success');
+                state.score += 100;
+                state.correctAnswers++;
+                fbBox.classList.add('bg-emerald-950/80', 'border-emerald-500');
+                fbIcon.className = 'w-8 h-8 rounded-lg bg-emerald-500 text-stone-950 flex items-center justify-center shrink-0 mt-0.5';
+                fbIcon.innerHTML = '<i class="fa-solid fa-check"></i>';
+                fbTitle.className = 'font-extrabold text-sm mb-1 text-emerald-400';
+                fbTitle.textContent = 'Deduksi Sosiologis Tepat! (+100 Poin)';
+            } else {
+                playSFX('error');
+                clickedBtn.classList.add('wrong');
+                state.casePerfect = false;
+                fbBox.classList.add('bg-red-950/80', 'border-red-500');
+                fbIcon.className = 'w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center shrink-0 mt-0.5';
+                fbIcon.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                fbTitle.className = 'font-extrabold text-sm mb-1 text-red-400';
+                fbTitle.textContent = 'Analisis Kurang Tepat!';
+            }
+
+            fbDesc.textContent = explanation;
+            updateGameplayHUD();
+
+            const nextBtn = document.getElementById('deductionNextBtn');
+            if (state.deductionStep === 1) {
+                nextBtn.innerHTML = '<span>LANJUT KE PENGENDALIAN SOSIAL</span> <i class="fa-solid fa-arrow-right"></i>';
+            } else if (state.caseIndex < casesData.length - 1) {
+                nextBtn.innerHTML = '<span>PATROLI KE TKP BERIKUTNYA</span> <i class="fa-solid fa-person-walking"></i>';
+            } else {
+                nextBtn.innerHTML = '<span>LIHAT LAPORAN AKHIR BIRO</span> <i class="fa-solid fa-award"></i>';
+            }
+        }
+
+        function advanceDeductionStep() {
+            if (state.deductionStep === 1) {
+                playSFX('step');
+                state.deductionStep = 2;
+                renderDeductionStep(2);
+            } else {
+                playSFX('stamp');
+                const c = casesData[state.caseIndex];
+                state.caseHistory.push({
+                    code: c.code,
+                    title: c.title,
+                    perfect: state.casePerfect
+                });
+
+                closeDeductionModal();
+                state.caseIndex++;
+
+                if (state.caseIndex < casesData.length) {
+                    loadCaseLevel(state.caseIndex);
+                } else {
+                    showSummaryScreen();
+                }
+            }
+        }
+
+        /* =========================================================================
+           6. MANAJEMEN LEVEL, HUD & INPUT KEYBOARD / TOUCH
+           ========================================================================= */
+        function showOnlyScreen(screenId) {
+            ['lobbyScreen', 'gameplayScreen', 'summaryScreen'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function startPatrolGame() {
+            playSFX('stamp');
+            const inputName = document.getElementById('agentNameField').value.trim();
+            state.agentName = inputName || 'Inspektur Arya';
+            state.caseIndex = 0;
+            state.score = 0;
+            state.correctAnswers = 0;
+            state.totalQuestions = 0;
+            state.caseHistory = [];
+
+            document.getElementById('headerStatusLabel').textContent = `PENYIDIK: ${state.agentName.toUpperCase()}`;
+            showOnlyScreen('gameplayScreen');
+            resizeCanvas();
+            loadCaseLevel(0);
+        }
+
+        function loadCaseLevel(idx) {
+            const c = casesData[idx];
+            state.collectedClues = [false, false, false];
+            state.deductionStep = 1;
+            state.casePerfect = true;
+            state.isModalOpen = false;
+            state.player.x = c.spawn.x;
+            state.player.y = c.spawn.y;
+            state.player.facing = 'right';
+
+            document.getElementById('hudCaseBadge').textContent = `KASUS ${idx + 1}/${casesData.length}`;
+            document.getElementById('hudCaseTitle').textContent = c.title;
+            document.getElementById('hudCaseZone').textContent = `Zona: ${c.zoneName}`;
+            document.getElementById('openDeductionBtn').classList.add('hidden');
+            document.getElementById('dialogueOverlay').classList.add('hidden');
+            document.getElementById('bottomHintText').textContent =
+                'Arahkan detektif ke 3 titik ikon berkilau di peta untuk mewawancarai saksi & mengambil barang bukti.';
+
+            updateGameplayHUD();
+        }
+
+        function updateGameplayHUD() {
+            document.getElementById('hudScoreValue').textContent = state.score;
+            const c = casesData[state.caseIndex];
+            const pillsBox = document.getElementById('clueTrackerPills');
+            pillsBox.innerHTML = c.hotspots.map((hs, i) => {
+                const done = state.collectedClues[i];
+                const label = hs.type === 'npc' ? `Saksi ${i === 0 ? 1 : 2}` : 'Bukti';
+                return `
+                    <span class="px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 ${done ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-gray-800 text-gray-400 border border-gray-700'}">
+                        <i class="fa-solid ${done ? 'fa-check-circle' : 'fa-circle-dot'}"></i>
+                        <span>${label}</span>
+                    </span>
+                `;
+            }).join('');
+        }
+
+        function showSummaryScreen() {
+            playSFX('success');
+            showOnlyScreen('summaryScreen');
+
+            const accuracy = state.totalQuestions > 0
+                ? Math.round((state.correctAnswers / state.totalQuestions) * 100)
+                : 0;
+
+            document.getElementById('finalAgentTitle').textContent = state.agentName;
+            document.getElementById('finalScoreText').textContent = state.score;
+            document.getElementById('finalAccText').textContent = `${accuracy}%`;
+
+            let rank = 'Detektif Magang Lapangan';
+            let sub = 'Terus latih analisis sosiologismu dengan meninjau Buku Saku BIS.';
+            if (state.score >= 1200) {
+                rank = 'Kepala Biro Investigasi Sosiologi';
+                sub = 'Sempurna! Seluruh TKP 2D dan analisis pengendalian sosial dipecahkan secara presisi.';
+            } else if (state.score >= 850) {
+                rank = 'Inspektur Utama Patroli TKP';
+                sub = 'Kerja lapangan yang sangat solid dan tajam dalam membaca fenomena sosial.';
+            }
+            document.getElementById('finalRankText').textContent = rank;
+            document.getElementById('finalRankSubtitle').textContent = sub;
+
+            const logBox = document.getElementById('finalCaseLogList');
+            logBox.innerHTML = state.caseHistory.map(item => `
+                <div class="bg-white/85 border border-stone-300 rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2">
+                    <div>
+                        <span class="font-typewriter text-xs font-bold text-stone-600 mr-2">${item.code}</span>
+                        <span class="font-bold text-xs sm:text-sm text-stone-900">${item.title}</span>
+                    </div>
+                    <span class="font-typewriter text-[11px] font-bold px-2.5 py-0.5 rounded border ${item.perfect ? 'bg-emerald-100 text-emerald-800 border-emerald-400' : 'bg-amber-100 text-amber-800 border-amber-400'}">
+                        ${item.perfect ? 'TERPECAHKAN' : 'SELESAI'}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function toggleManualModal() {
+            playSFX('step');
+            document.getElementById('manualModal').classList.toggle('hidden');
+        }
+
+        function confirmReturnToLobby() {
+            if (!document.getElementById('lobbyScreen').classList.contains('hidden')) return;
+            document.getElementById('confirmLobbyModal').classList.remove('hidden');
+        }
+
+        function returnToLobby() {
+            document.getElementById('confirmLobbyModal').classList.add('hidden');
+            document.getElementById('deductionModal').classList.add('hidden');
+            document.getElementById('headerStatusLabel').textContent = 'UNIT PATROLI LAPANGAN • SIAGA';
+            showOnlyScreen('lobbyScreen');
+        }
+
+        // Kontrol Keyboard (WASD, Panah, Spasi / E)
+        window.addEventListener('keydown', (e) => {
+            if (!e || typeof e.key !== 'string') return;
+            const k = e.key.toLowerCase();
+            if (k === 'w' || e.key === 'ArrowUp') keys.up = true;
+            if (k === 's' || e.key === 'ArrowDown') keys.down = true;
+            if (k === 'a' || e.key === 'ArrowLeft') keys.left = true;
+            if (k === 'd' || e.key === 'ArrowRight') keys.right = true;
+
+            if (e.code === 'Space' || k === 'e') {
+                if (!document.getElementById('gameplayScreen').classList.contains('hidden')) {
+                    e.preventDefault();
+                    triggerInteraction();
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (!e || typeof e.key !== 'string') return;
+            const k = e.key.toLowerCase();
+            if (k === 'w' || e.key === 'ArrowUp') keys.up = false;
+            if (k === 's' || e.key === 'ArrowDown') keys.down = false;
+            if (k === 'a' || e.key === 'ArrowLeft') keys.left = false;
+            if (k === 'd' || e.key === 'ArrowRight') keys.right = false;
+        });
+
+        // Kontrol Virtual D-Pad Touch & Mouse
+        function bindDpadButton(btnId, dirKey) {
+            const btn = document.getElementById(btnId);
+            const press = (e) => {
+                e.preventDefault();
+                keys[dirKey] = true;
+                btn.classList.add('pressed');
+            };
+            const release = (e) => {
+                e.preventDefault();
+                keys[dirKey] = false;
+                btn.classList.remove('pressed');
+            };
+            btn.addEventListener('touchstart', press, { passive: false });
+            btn.addEventListener('touchend', release);
+            btn.addEventListener('touchcancel', release);
+            btn.addEventListener('mousedown', press);
+            btn.addEventListener('mouseup', release);
+            btn.addEventListener('mouseleave', release);
+        }
+
+        window.onload = function () {
+            bindDpadButton('btnUp', 'up');
+            bindDpadButton('btnDown', 'down');
+            bindDpadButton('btnLeft', 'left');
+            bindDpadButton('btnRight', 'right');
+            resizeCanvas();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
